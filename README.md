@@ -75,3 +75,78 @@ This project is primarily for **learning purposes**, focusing on:
 
 ```bash
 sudo apt install libsdl2-dev libsdl2-image-dev
+```
+---
+
+## Building
+
+### g++ (Linux / MinGW)
+
+```bash
+g++ -Llib -O3 \
+main.cpp \
+game/*.cpp \
+game/common/*.cpp \
+game/inventory/*.cpp \
+game/world/*.cpp \
+game/world/block/*.cpp \
+game/world/chunk/*.cpp \
+game/world/entity/*.cpp \
+game/world/world_loader/*.cpp \
+-lSDL2 -lSDL2_image
+```
+
+---
+
+### clang++ (Linux / macOS)
+
+```bash
+clang++ -Llib -O3 \
+main.cpp \
+game/*.cpp \
+game/common/*.cpp \
+game/inventory/*.cpp \
+game/world/*.cpp \
+game/world/block/*.cpp \
+game/world/chunk/*.cpp \
+game/world/entity/*.cpp \
+game/world/world_loader/*.cpp \
+-lSDL2 -lSDL2_image
+```
+
+---
+
+## MinGW g++ (Windows)
+
+```bash
+x86_64-w64-mingw32-g++ -Llib -O3 \
+main.cpp \
+game/*.cpp \
+game/common/*.cpp \
+game/inventory/*.cpp \
+game/world/*.cpp \
+game/world/block/*.cpp \
+game/world/chunk/*.cpp \
+game/world/entity/*.cpp \
+game/world/world_loader/*.cpp \
+-lSDL2 -lSDL2_image
+```
+
+---
+
+## MSVC (Visual Studio)
+
+```bash
+cl /O2 /EHsc ^
+main.cpp ^
+game\*.cpp ^
+game\common\*.cpp ^
+game\inventory\*.cpp ^
+game\world\*.cpp ^
+game\world\block\*.cpp ^
+game\world\chunk\*.cpp ^
+game\world\entity\*.cpp ^
+game\world\world_loader\*.cpp ^
+/I include ^
+/link /LIBPATH:lib SDL2.lib SDL2_image.lib
+```
