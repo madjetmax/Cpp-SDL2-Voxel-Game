@@ -121,6 +121,7 @@ void Player::controls(SDL_Event& event, Camera& camera, float dt) {
         if (!in_inventory) {
             if (int(event.button.button) == 1) {
                 on_block_break = true;
+                on_kick = true;
             }
             if (int(event.button.button) == 3) {
                 on_block_interaction = true;
@@ -571,6 +572,14 @@ int Player::get_chunk_ind_by_pos(int cx, int cy, int cz) {
     return cx * WORLD_SIZE_Y * WORLD_SIZE_Z + cy * WORLD_SIZE_Z + cz;
 }
 
+void Player::update_colldowns(float dt) {
+    // block interactions
+    if (block_interactions_cooldown > 0) {
+        block_interactions_cooldown -= 1 * dt;
+        block_interactions_cooldown = max(0.0f, block_interactions_cooldown);
+    }
+}
+
 void Player::update_gravity(float dt) {
 
     float min_value = min_gravity;
@@ -602,6 +611,31 @@ void Player::update_angle_direction(Camera& camera) {
     else if (camera.angle_y < 315 && camera.angle_y >= 225) angle_dirrection = 270;
 }
 
+void Player::update_body_angle(Camera& camera, float dt) {
+    body_angle_rotation += rotation_y;
+
+    // if rotatet more than diff
+    if (abs(body_angle_rotation - body_angle) > body_angle_diff) {
+        // add rotation to body angle
+        body_angle += rotation_y;
+
+        // set angle sin and cos
+        if (body_angle != last_body_angle) {
+            body_angle_sin = sin(body_angle * (M_PI / 180));
+            body_angle_cos = cos(body_angle * (M_PI / 180));
+
+            last_body_angle = body_angle;
+        }
+    }
+
+    // rotate straight if moving
+    if (go_fw || go_back || go_left || go_right) {
+        body_angle += 1 * dt;
+        // if (body_angle_rotation > body_angle) body_angle += 1 * dt;
+        // if (body_angle_rotation < body_angle) body_angle -= 1 * dt;
+    }
+}
+
 
 void Player::update(Camera& camera, Chunk (&chunks)[CHUNKS_COUNT], float dt) {
     movement(camera, dt);
@@ -609,6 +643,7 @@ void Player::update(Camera& camera, Chunk (&chunks)[CHUNKS_COUNT], float dt) {
 
     collisions(chunks);
 
+    update_colldowns(dt);
 
     // update pos
     x += mx;
@@ -642,6 +677,7 @@ void Player::update(Camera& camera, Chunk (&chunks)[CHUNKS_COUNT], float dt) {
     angle_y_cos = camera.angle_y_cos;
 
     update_angle_direction(camera);
+    // update_body_angle(camera, dt);
 
     // clear states
     mx = 0;

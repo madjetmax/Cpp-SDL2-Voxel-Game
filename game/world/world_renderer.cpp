@@ -21,6 +21,7 @@ void WorldRenderer::load_faces_textures(SDL_Renderer* renderer, PlayerInventory&
     // load textures for blocks
     string base_folder = "game/assets/textures/blocks/";
     string inventory_folder = "game/assets/textures/inventory/";
+    string entities_folder = "game/assets/textures/entities/";
     // test
     load_face_texture(renderer, "test_block_side", base_folder + "test.png", player_inv, false);
     load_face_texture(renderer, "test_slab_side", base_folder + "test_slab_side.png", player_inv, false);
@@ -184,6 +185,9 @@ void WorldRenderer::load_faces_textures(SDL_Renderer* renderer, PlayerInventory&
     load_face_texture(renderer, "bucket", inventory_folder + "bucket.png", player_inv, true);
     load_face_texture(renderer, "water_bucket", inventory_folder + "water_bucket.png", player_inv, true);
     load_face_texture(renderer, "lava_bucket", inventory_folder + "lava_bucket.png", player_inv, true);
+
+    // * entities
+    load_face_texture(renderer, "player_body", entities_folder + "player_body.png", player_inv, false);
 }
 
 void WorldRenderer::clear_projections() {
@@ -440,6 +444,11 @@ void WorldRenderer::update_selected_face() {
 void WorldRenderer::update_block_outline(Chunk (&chunks)[CHUNKS_COUNT], Camera& camera) {
     // get block from selected face
     if (selected_face) {
+        // skip uncorect world data 
+        if (selected_face->block_x < 0) {
+            return;
+        }
+
         Chunk& chunk = chunks[selected_face->chunk_ind];
         Block& block = chunk.blocks[selected_face->block_x][selected_face->block_y][selected_face->block_z];
 
@@ -792,6 +801,83 @@ void WorldRenderer::update_current_chunk_outline(Chunk (&chunks)[CHUNKS_COUNT], 
     }
 }
 
+// player body
+void WorldRenderer::update_player_body(Camera& camera, Player& player) {
+    // * add body faces
+    float offset_y = -15 + camera.shaking_angle_sin * camera.shaking_mult;
+    float offset_z = 5;
+
+    float body_heigh = 25.0f;
+    float body_width = 25.0f;
+
+    RawFace3d raw_face = {
+        {
+            player.x + (-body_width / 2.0f) * player.body_angle_cos + offset_z * player.body_angle_sin, 
+            player.y + offset_y - body_heigh / 2.0f, 
+            player.z + -offset_z * player.body_angle_cos + (-body_width / 2.0f) * player.body_angle_sin
+        }, 
+        {
+            player.x + (-body_width / 2.0f) * player.body_angle_cos + offset_z * player.body_angle_sin, 
+            player.y + offset_y + body_heigh / 2.0f, 
+            player.z + -offset_z * player.body_angle_cos + (-body_width / 2.0f) * player.body_angle_sin
+        }, 
+        {
+            player.x + (body_width / 2.0f) * player.body_angle_cos + offset_z * player.body_angle_sin, 
+            player.y + offset_y - body_heigh / 2.0f, 
+            player.z + -offset_z  * player.body_angle_cos + (body_width / 2.0f) * player.body_angle_sin
+        }, 
+
+        90,  0, 180, 180,
+
+        0,
+        {0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f},
+
+        'f',
+        false,
+
+        {224, 164, 164, 255}, {224, 164, 164, 255}, {224, 164, 164, 255},
+        1.0f,
+        {255, 255, 255},
+
+        -1, 0, 0,
+        0
+    };
+    
+    // * first face
+    auto projected_face = camera.full_face_projection(raw_face);
+    if (projected_face.has_value()) {
+        ProjectedFace2d& face_2d = *projected_face;
+
+        projected_faces_2d.push_back(face_2d);
+    }
+
+    // * second face
+    // set new points pos
+    raw_face.point1 = {
+        player.x + (-body_width / 2.0f) * player.body_angle_cos + offset_z * player.body_angle_sin, 
+        player.y + offset_y + body_heigh / 2.0f, 
+        player.z + -offset_z * player.body_angle_cos + (-body_width / 2.0f) * player.body_angle_sin
+    };
+    raw_face.point2 = {
+        player.x + (body_width / 2.0f) * player.body_angle_cos + offset_z * player.body_angle_sin, 
+        player.y + offset_y + body_heigh / 2.0f, 
+        player.z + -offset_z * player.body_angle_cos + (body_width / 2.0f) * player.body_angle_sin
+    };
+    raw_face.point3 = {
+        player.x + (body_width / 2.0f) * player.body_angle_cos + offset_z * player.body_angle_sin, 
+        player.y + offset_y - body_heigh / 2.0f, 
+        player.z + -offset_z  * player.body_angle_cos + (body_width / 2.0f) * player.body_angle_sin
+    };
+        
+    projected_face = camera.full_face_projection(raw_face);
+    if (projected_face.has_value()) {
+        ProjectedFace2d& face_2d = *projected_face;
+
+        projected_faces_2d.push_back(face_2d);
+    }
+}
+
+
 // nature
 void WorldRenderer::update_clouds(Camera& camera) {
     float height = 8 * BLOCK_SIZE;
@@ -842,6 +928,7 @@ void WorldRenderer::update_clouds(Camera& camera) {
 void WorldRenderer::update(Camera& camera, Chunk (&chunks)[CHUNKS_COUNT], Player& player, PlayerInventory& player_inv) {
     project_faces(camera, player, player_inv);
 
+    // update_player_body(camera, player);
     // update_clouds(camera);
 
     sort_faces();

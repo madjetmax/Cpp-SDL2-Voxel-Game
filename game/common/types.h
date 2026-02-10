@@ -87,10 +87,13 @@ struct ProjectedFace2d {
     // block and chunk data
     short block_x = -1;
     unsigned short block_y, block_z; 
-
     unsigned short chunk_ind;
+    
     // dist
     float dist;
+
+    // entity data
+    short entity_ind = -1; 
 };
 
 struct RawPoint3d
@@ -138,7 +141,7 @@ struct InventoryItemData {
     float item_h;
 
     int8_t max_stack;
-    uint8_t max_durability;
+    float max_durability;
 
     // interactions
     string type;
@@ -159,7 +162,7 @@ struct InventoryItemData {
 struct InventorySlot {
     uint8_t item_id = 0;
     uint8_t items_count = 0;
-    uint8_t durability = 0;
+    float durability = 0;
 };
 
 // * inventories

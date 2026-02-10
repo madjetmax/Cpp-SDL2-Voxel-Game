@@ -1,7 +1,6 @@
 import os
 import pyperclip
 
-
 directory = "game"
 
 # g++ -Llib -O3 main.cpp game/*.cpp -lSDL2 -lSDL2_image

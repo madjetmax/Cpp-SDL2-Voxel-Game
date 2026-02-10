@@ -64,7 +64,9 @@ public:
     float max_block_breaking_progress = 0.0f;
 
     bool on_block_interaction;
-    // bool on_block_place;
+    float block_interactions_cooldown = 0;
+    bool on_kick;
+
     bool fast_interactions = false;
 
     bool in_inventory = false;
@@ -86,6 +88,18 @@ public:
     float jump_height = 7.3;
     
     float up_down_speed = 5;
+
+    // world renderer body
+    float body_angle_rotation = 0;
+    float body_angle_diff = 60;
+    
+    float body_angle = 0;
+    float last_body_angle = 0;
+    
+    float body_angle_sin = 0;
+    float body_angle_cos = 0;
+    
+
     // methods
     Player(void);
 
@@ -97,8 +111,10 @@ public:
     bool collider_with_item_drop(ItemDrop& entity);
     int get_chunk_ind_by_pos(int x, int y, int z);
 
+    void update_colldowns(float dt);
     void update_gravity(float dt);
     void update_angle_direction(Camera& camera);
+    void update_body_angle(Camera& camera, float dt);
     void update(Camera& camera, Chunk (&chunks)[CHUNKS_COUNT], float dt);
 };
 

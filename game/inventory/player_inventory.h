@@ -78,6 +78,7 @@ public:
     InventorySlot empty_slot = {0, 0, 0};
 
     int current_slot_ind = 0;
+    
     InventorySlot* current_slot;
     InventoryItemData* current_slot_data = nullptr;
     BlockLight* current_slot_block_light = nullptr;
@@ -111,6 +112,7 @@ public:
     bool on_right_mb = false;
     bool on_left_mb = false;
     bool on_shift = false;
+    bool on_slot_change = false;
 
     // all items slots
     int all_items_count = 50;

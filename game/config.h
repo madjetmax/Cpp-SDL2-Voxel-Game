@@ -24,7 +24,7 @@ constexpr int WORLD_SIZE_Z = 20;
 
 constexpr int CHUNKS_COUNT = WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z;
 
-constexpr int WORLD_CHUNKS_LOAD_DIST = 4200;
+constexpr int WORLD_CHUNKS_LOAD_DIST = 7000;
 
 constexpr int BLOCK_SELECT_DIST = 2400;
 

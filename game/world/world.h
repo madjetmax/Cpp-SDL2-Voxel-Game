@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <thread>
+#include <algorithm>
 #include "../../inc/SDL.h"
 
 #include "../config.h"
@@ -37,7 +38,25 @@ public:
     Camera camera;
     Player player;
 
-    bool day = true;
+    // world time and sky color
+    float time = 0; // 0 - TIME_END
+
+    // Time keyframes (0 - 1000)
+    const int TIME_NIGHT     = 0;
+    const int TIME_MORNING   = 250;
+    const int TIME_DAY_START = 350;
+    const int TIME_DAY_END   = 650;
+    const int TIME_EVENING   = 750;
+    const int TIME_END       = 1000;
+
+    // Sky colors
+    const SDL_Color SKY_NIGHT   = {10,  15,  35,  255};
+    const SDL_Color SKY_MORNING = {255, 90,  70, 255};
+    const SDL_Color SKY_DAY     = {135, 206, 235, 255};
+    const SDL_Color SKY_EVENING = {255, 140, 90,  255};
+
+    float max_sky_color_value = 192.0f;
+    SDL_Color sky_color = {255, 255, 255, 255};
     
     // objects, chunks, blocks
     WorldGenerator world_generator;
@@ -50,6 +69,7 @@ public:
     // * entities
     vector <ItemDrop> all_items_drops;
     vector <BlockEntity> all_blocks_entities;
+    vector <Mob> all_mobs;
 
     World(void);
 
@@ -60,8 +80,10 @@ public:
     // * loops for all entities
     void loop_all_entities(PlayerInventory& player_inv, float dt);
     
+    SDL_Color getSkyColor();
+
     void update(PlayerInventory& player_inv, float dt);
-    void update_sun_light(float dt);
+    void update_time(float dt);
 
     void draw(SDL_Renderer* renderer);
 };

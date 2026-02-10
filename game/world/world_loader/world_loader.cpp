@@ -2378,6 +2378,11 @@ void WorldLoader::update_block_break(WorldRenderer& world_renderer, Chunk (&chun
     if (player.on_block_break) {
         // get selected face data
         if (world_renderer.selected_face) {
+            // skip uncorrect world data
+            if (world_renderer.selected_face->block_x < 0) {
+                return;
+            }
+
             // get world data 
             int chunk_ind = world_renderer.selected_face->chunk_ind;
 
@@ -2403,7 +2408,7 @@ void WorldLoader::update_block_break(WorldRenderer& world_renderer, Chunk (&chun
                 world_renderer.current_breaking_block_z = block_z;
             }
 
-            // check selected face change and set progress
+            // check selected face change and reset progress
             if (
                 (world_renderer.selected_face->block_x != last_block_breaking_x) ||
                 (world_renderer.selected_face->block_y != last_block_breaking_y) ||
@@ -2430,6 +2435,21 @@ void WorldLoader::update_block_break(WorldRenderer& world_renderer, Chunk (&chun
                 world_renderer.current_breaking_block_z = block_z;
             }
 
+            // check inventory slot change and reset progress
+            if (player_inv.on_slot_change) {
+                Chunk& chunk = chunks[chunk_ind];
+                Block& block = chunk.blocks[block_x][block_y][block_z];
+                FullBlockData& block_full_data = all_blocks_full_data[block.id];
+                current_breaking_block_data = &block_full_data;
+
+                player.block_breaking_progress = block_full_data.strength;
+                player.max_block_breaking_progress = block_full_data.strength;
+
+                last_block_breaking_x = world_renderer.selected_face->block_x;
+                last_block_breaking_y = world_renderer.selected_face->block_y;
+                last_block_breaking_z = world_renderer.selected_face->block_z;
+            }
+
             // * reduce progress
             // set speed
             float speed = 1;
@@ -2442,9 +2462,20 @@ void WorldLoader::update_block_break(WorldRenderer& world_renderer, Chunk (&chun
                     speed *= player_inv.current_slot_data->breaking_increase_speed;
                 }
             }
-            // reduce
+            // reduce progress
             player.block_breaking_progress -= speed * dt;
 
+            // reduce tool durability and break
+            if (player_inv.current_slot_data && player_inv.current_slot_data->type == "tool") {
+                
+                player_inv.current_slot->durability -= (float(randint(5, 20)) / 10.0f) * dt;
+                if (player_inv.current_slot->durability <= 0) {
+                    player_inv.clear_current_slot();
+                    player_inv.current_slot->durability = 0;
+                } 
+            }
+
+            // check if progress is going
             if (player.block_breaking_progress > 0.0f && !player.fast_interactions) {
                 return;
             }
@@ -2570,18 +2601,6 @@ void WorldLoader::update_block_break(WorldRenderer& world_renderer, Chunk (&chun
                 }
 
                 block.inventory_id = 0;
-            }
-
-            // reduce tool durability and break
-            if (player_inv.current_slot_data && player_inv.current_slot_data->type == "tool") {
-                int item_durability = int(player_inv.current_slot->durability);
-        
-                item_durability -= randint(1, 2);
-                if (item_durability <= 0) {
-                    player_inv.clear_current_slot();
-                } else {
-                    player_inv.current_slot->durability = uint8_t(item_durability);
-                }
             }
 
             // set chunk air
@@ -2756,21 +2775,95 @@ Chunk* WorldLoader::add_block(WorldRenderer& world_renderer, uint8_t block_id, F
     if (!can_be_placed) {
         return nullptr;
     }
-    
-    // check if block is not on player pos
-    int x_right_in_chunk = int(int(player.x + player.collider_size_x / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
-    int x_left_in_chunk = int(int(player.x - player.collider_size_x / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
-    
-    int y_top_in_chunk = int(int(player.y + player.collider_size_top + BLOCK_SIZE / 2) / BLOCK_SIZE);
-    int y_middle_in_chunk = int(int(player.y - player.collider_size_bottom / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
-    int y_bottom_in_chunk = int(int(player.y - player.collider_size_bottom + BLOCK_SIZE / 2) / BLOCK_SIZE);
-    
-    int z_front_in_chunk = int(int(player.z + player.collider_size_z / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
-    int z_back_in_chunk = int(int(player.z - player.collider_size_z / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
 
-    if (((block_x + chunk->x / BLOCK_SIZE) == x_left_in_chunk || (block_x + chunk->x / BLOCK_SIZE) == x_right_in_chunk) && ((block_y + chunk->y / BLOCK_SIZE) == y_top_in_chunk || (block_y + chunk->y / BLOCK_SIZE) == y_middle_in_chunk || (block_y + chunk->y / BLOCK_SIZE) == y_bottom_in_chunk) && ((block_z + chunk->z / BLOCK_SIZE) == z_front_in_chunk || (block_z + chunk->z / BLOCK_SIZE)  == z_back_in_chunk)) {
-        return nullptr;
+    // get block colliders
+    vector <BlockCollider>* block_colliders = block_data.colliders;
+    // loop all colliders
+    int colliders_coutn = block_colliders->size();
+    
+    // check block collisions
+    if (colliders_coutn > 0) {
+        // * check if block is not on player pos
+        int x_right_in_chunk = int(int(player.x + player.collider_size_x / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+        int x_left_in_chunk = int(int(player.x - player.collider_size_x / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+        
+        int y_top_in_chunk = int(int(player.y + player.collider_size_top + BLOCK_SIZE / 2) / BLOCK_SIZE);
+        int y_middle_in_chunk = int(int(player.y - player.collider_size_bottom / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+        int y_bottom_in_chunk = int(int(player.y - player.collider_size_bottom + BLOCK_SIZE / 2) / BLOCK_SIZE);
+        
+        int z_front_in_chunk = int(int(player.z + player.collider_size_z / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+        int z_back_in_chunk = int(int(player.z - player.collider_size_z / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+    
+        if (
+            ((block_x + chunk->x / BLOCK_SIZE) == x_left_in_chunk || 
+            (block_x + chunk->x / BLOCK_SIZE) == x_right_in_chunk) && 
+            ((block_y + chunk->y / BLOCK_SIZE) == y_top_in_chunk || 
+            (block_y + chunk->y / BLOCK_SIZE) == y_middle_in_chunk || 
+            (block_y + chunk->y / BLOCK_SIZE) == y_bottom_in_chunk) && 
+            ((block_z + chunk->z / BLOCK_SIZE) == z_front_in_chunk || 
+            (block_z + chunk->z / BLOCK_SIZE)  == z_back_in_chunk)
+        ) {
+            return nullptr;
+        }
+
+        // * check if block is not on falling blocks entities pos
+        for (size_t ei = 0; ei < all_blocks_entities->size(); ei++)
+        {
+            BlockEntity entity = (*all_blocks_entities)[ei];
+
+            int x_right_in_chunk = int(int(entity.x + entity.collider_size_x / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            int x_left_in_chunk = int(int(entity.x - entity.collider_size_x / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            
+            int y_top_in_chunk = int(int(entity.y + entity.collider_size_top + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            int y_middle_in_chunk = int(int(entity.y - entity.collider_size_bottom / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            int y_bottom_in_chunk = int(int(entity.y - entity.collider_size_bottom + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            
+            int z_front_in_chunk = int(int(entity.z + entity.collider_size_z / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            int z_back_in_chunk = int(int(entity.z - entity.collider_size_z / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+        
+            if (
+                ((block_x + chunk->x / BLOCK_SIZE) == x_left_in_chunk || 
+                (block_x + chunk->x / BLOCK_SIZE) == x_right_in_chunk) && 
+                ((block_y + chunk->y / BLOCK_SIZE) == y_top_in_chunk || 
+                (block_y + chunk->y / BLOCK_SIZE) == y_middle_in_chunk || 
+                (block_y + chunk->y / BLOCK_SIZE) == y_bottom_in_chunk) && 
+                ((block_z + chunk->z / BLOCK_SIZE) == z_front_in_chunk || 
+                (block_z + chunk->z / BLOCK_SIZE)  == z_back_in_chunk)
+            ) {
+                return nullptr;
+            }
+
+        }
+
+        // * check if block is not on mobs pos
+        for (size_t ei = 0; ei < all_mobs->size(); ei++)
+        {
+            Mob& entity = (*all_mobs)[ei];
+
+            int x_right_in_chunk = int(int(entity.x + entity.collider_size_x / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            int x_left_in_chunk = int(int(entity.x - entity.collider_size_x / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            
+            int y_top_in_chunk = int(int(entity.y + entity.collider_size_top + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            int y_middle_in_chunk = int(int(entity.y - entity.collider_size_bottom / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            int y_bottom_in_chunk = int(int(entity.y - entity.collider_size_bottom + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            
+            int z_front_in_chunk = int(int(entity.z + entity.collider_size_z / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+            int z_back_in_chunk = int(int(entity.z - entity.collider_size_z / 2 + BLOCK_SIZE / 2) / BLOCK_SIZE);
+        
+            if (
+                ((block_x + chunk->x / BLOCK_SIZE) == x_left_in_chunk || 
+                (block_x + chunk->x / BLOCK_SIZE) == x_right_in_chunk) && 
+                ((block_y + chunk->y / BLOCK_SIZE) == y_top_in_chunk || 
+                (block_y + chunk->y / BLOCK_SIZE) == y_middle_in_chunk || 
+                (block_y + chunk->y / BLOCK_SIZE) == y_bottom_in_chunk) && 
+                ((block_z + chunk->z / BLOCK_SIZE) == z_front_in_chunk || 
+                (block_z + chunk->z / BLOCK_SIZE)  == z_back_in_chunk)
+            ) {
+                return nullptr;
+            }
+        }
     }
+    
     chunk->is_air = false;
 
     // get and change block
@@ -2803,10 +2896,18 @@ Chunk* WorldLoader::add_block(WorldRenderer& world_renderer, uint8_t block_id, F
 void WorldLoader::update_block_place(WorldRenderer& world_renderer, Chunk (&chunks)[CHUNKS_COUNT], map<uint16_t, StorageBoxInv>& storages, uint16_t& last_storage_id, Player& player, PlayerInventory& player_inv,  float dt) {
     if (player.on_block_interaction) {
         if (!player.fast_interactions) {
-            player.on_block_interaction = false;
+            // skip on interactions cooldown
+            if (player.block_interactions_cooldown > 0) {
+                return;
+            }
         }
+        // set interactions cooldown
+        player.block_interactions_cooldown = 10;
         // get selected face data
         if (world_renderer.selected_face) {
+            if (world_renderer.selected_face->block_x < 0) {
+                return;
+            }
             // get chunk and block
             int chunk_ind = world_renderer.selected_face->chunk_ind;
 
@@ -3409,14 +3510,11 @@ bool WorldLoader::check_block_interaction(WorldRenderer& world_renderer, Block& 
         update_near_chunks(world_renderer, chunks, chunk, block.x / BLOCK_SIZE, block.y / BLOCK_SIZE, block.z / BLOCK_SIZE, player, false);
 
         // reduce hoe durability 
-        int item_durability = int(player_inv.current_slot->durability);
-        
-        item_durability -= randint(0, 2);
-        if (item_durability <= 0) {
+        player_inv.current_slot->durability -= float(randint(0, 2)) * dt;
+        if (player_inv.current_slot->durability <= 0) {
             player_inv.clear_current_slot();
-        } else {
-            player_inv.current_slot->durability = uint8_t(item_durability);
-        }
+            player_inv.current_slot->durability = 0;
+        } 
         return true;
     }
 

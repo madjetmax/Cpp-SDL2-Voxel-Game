@@ -333,6 +333,8 @@ void Entity::update(Chunk (&chunks)[CHUNKS_COUNT], float dt) {
     y += my;
     z += mz;
 
+    rotation_y = 0.6;
+
     // update angle and rotation
     angle_y += rotation_y;
 
@@ -592,6 +594,90 @@ void BlockEntity::update(Chunk (&chunks)[CHUNKS_COUNT], float dt) {
         angle_y += 360;
     }
     
+    // clear states and values
+    mx = 0;
+    my = 0;
+    mz = 0;
+
+    rotation_y = 0;
+}
+
+// * Mob
+Mob::Mob() {}
+
+void Mob::hurt(float damage) {
+    // set redness 
+    if (damage_redness == 0) {
+        damage_redness = 30.0f;
+    }
+}
+
+
+void Mob::set_clear_face_pos(RawFace3d& face) {
+    float point1_x = face.point1.x;
+    float point1_z = face.point1.z;
+
+    face.point1.x = -(point1_x * angle_y_cos - point1_z * angle_y_sin) + x;
+    face.point1.y += y;
+    face.point1.z =  point1_x * angle_y_sin + point1_z * angle_y_cos + z;
+
+    float point2_x = face.point2.x;
+    float point2_z = face.point2.z;
+
+    face.point2.x = -(point2_x * angle_y_cos - point2_z * angle_y_sin) + x;
+    face.point2.y += y;
+    face.point2.z =  point2_x * angle_y_sin + point2_z * angle_y_cos + z;
+
+    float point3_x = face.point3.x;
+    float point3_z = face.point3.z;
+
+    face.point3.x = -(point3_x * angle_y_cos - point3_z * angle_y_sin) + x;
+    face.point3.y += y;
+    face.point3.z =  point3_x * angle_y_sin + point3_z * angle_y_cos + z;
+}
+
+void Mob::update_cooldowns(float dt) {
+    // damage redness
+    if (damage_redness > 0) {
+        damage_redness -= 1 * dt;
+        damage_redness = max(0.0f, damage_redness);
+    }
+}
+
+
+void Mob::update(Chunk (&chunks)[CHUNKS_COUNT], float dt) {
+    update_gravity(dt);
+    update_inert(dt);
+
+    collisions(chunks);
+
+    update_cooldowns(dt);
+
+    // update pos
+    x += mx;
+    y += my;
+    z += mz;
+
+    rotation_y = 0.6 * dt;
+
+    // update angle and rotation
+    angle_y += rotation_y;
+
+    // update angle sin cos
+    if (angle_y != last_angle_y) {
+        angle_y_sin = sin(angle_y * (M_PI / 180));
+        angle_y_cos = cos(angle_y * (M_PI / 180));
+
+        last_angle_y = angle_y;
+    }
+    // normalize angle
+    if (angle_y > 360) {
+        angle_y -= 360;
+    }
+    if (angle_y < 0) {
+        angle_y += 360;
+    }
+
     // clear states and values
     mx = 0;
     my = 0;

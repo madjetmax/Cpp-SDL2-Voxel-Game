@@ -75,10 +75,13 @@ public:
     void update_block_outline(Chunk (&chunks)[CHUNKS_COUNT], Camera& camera);
     void update_current_chunk_outline(Chunk (&chunks)[CHUNKS_COUNT], Player& player);
 
+    // player body
+    void update_player_body(Camera& camera, Player& player);
+
     // nature
     void update_clouds(Camera& camera);
 
-    void update(Camera& camera, Chunk (&chunks)[CHUNKS_COUNT], Player& Player, PlayerInventory& player_inv);
+    void update(Camera& camera, Chunk (&chunks)[CHUNKS_COUNT], Player& player, PlayerInventory& player_inv);
 
     SDL_Color get_face_point_color(SDL_Color& point_color, ProjectedFace2d& face);
     void draw_face(SDL_Renderer* renderer, Player& player, ProjectedFace2d& face);

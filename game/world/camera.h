@@ -23,9 +23,12 @@ public:
     float angle_x_sin, angle_x_cos;
     float angle_y_sin, angle_y_cos;
 
+    float aspect_ratio;
     float fov;
-    float halfFovRad;
-    float cosHalfFov;
+    float halfFovRadX;
+    float halfFovRadY;
+    float cosHalfFovX;
+    float cosHalfFovY;
 
     const int walk_fov = 90;
     const int run_fov = 100;

@@ -36,6 +36,7 @@ class WorldLoader {
 public:
     // copies from world
     vector<BlockEntity>* all_blocks_entities = nullptr;
+    vector<Mob>* all_mobs = nullptr;
 
     // chunks 
     vector <Chunk*> loaded_chunks;
@@ -107,7 +108,6 @@ public:
     int set_light_sources_blocks_around(Chunk (&chunks)[CHUNKS_COUNT], int chunk_x, int chunk_y, int chunk_z);
     
     int get_chunk_ind_by_pos(int x, int y, int z);
-
     
     void check_block_faces_visible(Block& block, FullBlockData& block_data, int x, int y, int z, Chunk& chunk);
     Block* get_block_by_pos(int bx, int by, int bz, Chunk& chunk, Chunk (&chunks)[CHUNKS_COUNT]);

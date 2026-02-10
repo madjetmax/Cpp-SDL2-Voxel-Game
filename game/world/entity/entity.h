@@ -20,7 +20,7 @@ using namespace std;
 
 class Entity {
 public:
-    uint8_t id = 0;
+    uint8_t id = 1;
     
     float x, y, z; // pos in world
 
@@ -71,17 +71,15 @@ public:
     void collide_with_block(int bx, int by, int bz, Chunk& chunk, Chunk (&chunks)[CHUNKS_COUNT], int world_x, int world_y, int world_z, int x_in_chunk, int y_in_chunk, int z_in_chunk);
     int get_chunk_ind_by_pos(int x, int y, int z);
 
-
     void update_gravity(float dt);
     void update_inert(float dt);
 
     void update(Chunk (&chunks)[CHUNKS_COUNT],float dt);
 };
 
-// * child classes, base on entity
+// * child classes, based on entity
 class ItemDrop: public Entity {
 public:
-
     float y_floating_angle = 0; // smooth effect of item floating in air
     float y_floating_offset = 0; // smooth effect of item floating in air
 
@@ -90,7 +88,6 @@ public:
     bool pick_up_able = true;
 
     float lifetime = 6000;
-
 
     InventorySlot add_item;
     ItemDrop(void);
@@ -122,6 +119,18 @@ public:
     void update(Chunk (&chunks)[CHUNKS_COUNT], float dt);
 
     void set_clear_face_pos(RawFace3d& face);
+};
+
+class Mob: public Entity {
+public:
+    // states
+    float damage_redness = 0;
+
+    Mob(void);
+    void hurt(float damage);
+    void set_clear_face_pos(RawFace3d& face);
+    void update_cooldowns(float dt);
+    void update(Chunk (&chunks)[CHUNKS_COUNT], float dt);
 };
 
 #endif

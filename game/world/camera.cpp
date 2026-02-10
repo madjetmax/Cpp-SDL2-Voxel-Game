@@ -13,15 +13,20 @@ Camera::Camera() {
 
     fov = 90;
 
-    halfFovRad = (fov + 40) * 0.5f * (M_PI / 180.0f);
-    cosHalfFov = cos(halfFovRad);
+    aspect_ratio = float(WINDOW_W) / float(WINDOW_H);
+
+    halfFovRadX = (fov + 45) * 0.5f * (M_PI / 180.0f);
+    cosHalfFovX = cos(halfFovRadX);
+
+    halfFovRadY = atan(tan(halfFovRadX) / aspect_ratio);
+    cosHalfFovY = cos(halfFovRadY);
 
     // for projection
     float fov_horizontal = (fov + 40) * (M_PI / 180.0f); 
 	f_h = (WINDOW_W / 2) / tan(fov_horizontal / 2.0f);
 	f_v = (WINDOW_W / 2) / tan(fov_horizontal / 2.0f);
 
-    near_plane = 5;
+    near_plane = 1;
 }
 
 void Camera::set_fov(float new_fov) {
@@ -32,8 +37,11 @@ void Camera::set_fov(float new_fov) {
 	f_v = (WINDOW_W / 2) / tan(fov_horizontal / 2.0f);
 
     // fot frustum culling
-    halfFovRad = (fov + 40) * 0.5f * (M_PI / 180.0f);
-    cosHalfFov = cos(halfFovRad);
+    halfFovRadX = (fov + 45) * 0.5f * (M_PI / 180.0f);
+    cosHalfFovX = cos(halfFovRadX);
+
+    halfFovRadY = atan(tan(halfFovRadX) / aspect_ratio);
+    cosHalfFovY = cos(halfFovRadY);
 }
 
 
@@ -51,8 +59,8 @@ vec3 Camera::point_rotation(vec3& point, bool add_camera_pos) {
     // around y (horizontal)
     float y = point_y;
 
-    float res_x = point_x * angle_y_cos + point_z * angle_y_sin;
-    float z = -point_x * angle_y_sin + point_z * angle_y_cos;
+    float res_x =  point_x * angle_y_cos + point_z * angle_y_sin;
+    float z     = -point_x * angle_y_sin + point_z * angle_y_cos;
     
     // around x (vertical)
     float res_y = y * angle_x_cos - z * angle_x_sin;
@@ -134,6 +142,78 @@ vec2 Camera::point_projection(vec3& point) {
 
     return {draw_x, draw_y};
 }
+
+
+vec3 cross(const vec3& a, const vec3& b) {
+    return {
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    };
+}
+
+float dot(const vec3& a, const vec3& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+// bool Camera::face_visible(RawFace3d& face)
+// {
+//     // Always visible rule
+//     if (face.visiblity_angle_x_add == 180 ||
+//         face.visiblity_angle_y_add == 180) {
+//         return true;
+//     }
+
+//     // --- Face points ---
+//     vec3 p1 = face.point1;
+//     vec3 p2 = face.point2;
+//     vec3 p3 = face.point3;
+
+//     // --- Camera position ---
+//     vec3 cam;
+//     cam.x = x;
+//     cam.y = y;
+//     cam.z = z;
+
+//     // --- Edge vectors ---
+//     vec3 e1;
+//     e1.x = p2.x - p1.x;
+//     e1.y = p2.y - p1.y;
+//     e1.z = p2.z - p1.z;
+
+//     vec3 e2;
+//     e2.x = p3.x - p1.x;
+//     e2.y = p3.y - p1.y;
+//     e2.z = p3.z - p1.z;
+
+//     // --- Face normal (RIGHT-HANDED) ---
+//     vec3 normal;
+//     normal.x = e1.y * e2.z - e1.z * e2.y;
+//     normal.y = e1.z * e2.x - e1.x * e2.z;
+//     normal.z = e1.x * e2.y - e1.y * e2.x;
+
+//     // --- Face center ---
+//     vec3 center;
+//     center.x = (p1.x + p2.x + p3.x) / 3.0f;
+//     center.y = (p1.y + p2.y + p3.y) / 3.0f;
+//     center.z = (p1.z + p2.z + p3.z) / 3.0f;
+
+//     // --- Vector from face to camera ---
+//     vec3 to_camera;
+//     to_camera.x = cam.x - center.x;
+//     to_camera.y = cam.y - center.y;
+//     to_camera.z = cam.z - center.z;
+
+//     // --- Dot product ---
+//     float dot =
+//         normal.x * to_camera.x +
+//         normal.y * to_camera.y +
+//         normal.z * to_camera.z;
+
+//     // 🔥 CRITICAL FIX FOR Z+ FORWARD
+//     return dot > 0.0f;
+// }
+
 
 bool Camera::face_visible(RawFace3d& face) {
     // * ange y (horizontal)
@@ -222,11 +302,38 @@ bool Camera::face_visible(RawFace3d& face) {
 }
 
 // Fast FOV check using dot product instead of acos
-inline bool point_in_view(const vec3& point, float cosHalfFov)
+inline bool point_in_view(const vec3& point, float cosHalfFovX, float cosHalfFovY)
 {
+    
+    // float z = -point.z;
+
+    // // Must be in front of camera
+    // if (z <= 0.0f)
+    //     return false;
+
+    // // ---------- X (horizontal) ----------
+    // float lenSqXZ = point.x * point.x + z * z;
+    // if (lenSqXZ > 0.0f) {
+    //     float invLenXZ = 1.0f / sqrt(lenSqXZ);
+    //     float dotX = (z * invLenXZ); // dot with forward
+    //     if (dotX < cosHalfFovX)
+    //         return false;
+    // }
+
+    // // ---------- Y (vertical) ----------
+    // float lenSqYZ = point.y * point.y + z * z;
+    // if (lenSqYZ > 0.0f) {
+    //     float invLenYZ = 1.0f / sqrt(lenSqYZ);
+    //     float dotY = (z * invLenYZ); // dot with forward
+    //     if (dotY < cosHalfFovY)
+    //         return false;
+    // }
+
     float vx = point.x;
+    float vy = point.y;
     float vz = -point.z; // flipped so points in front have positive Z in this space
 
+    // * x (horizontal)
     float lenSq = vx * vx + vz * vz;
     if (lenSq == 0.0f)
         return true; // Point at camera
@@ -238,16 +345,36 @@ inline bool point_in_view(const vec3& point, float cosHalfFov)
     float dot = vzNorm * -1.0f;
 
     // Check if within half-FOV using precomputed cos
-    return dot >= cosHalfFov;
+    if (dot <= cosHalfFovX) {
+        return false;
+    }
+
+    // * y (vertical)
+
+    lenSq = vy * vy + vz * vz;
+    if (lenSq == 0.0f)
+        return true; // Point at camera
+
+    // Normalize only vz / sqrt(lenSq) is used, so compute reciprocal sqrt once
+    invLen = 1.0f / std::sqrt(lenSq);
+    vzNorm = vz * invLen;
+
+    dot = vzNorm * -1.0f;
+
+    // Check if within half-FOV using precomputed cos
+    if (dot <= cosHalfFovY) {
+        return false;
+    }
+    return true;
 }
 
 // Optimized triangle FOV check
 inline bool Camera::triangle_in_fov(const vec3& p1, const vec3& p2, const vec3& p3)
 {
     return (
-        point_in_view(p1, cosHalfFov) ||
-        point_in_view(p2, cosHalfFov) ||
-        point_in_view(p3, cosHalfFov)
+        point_in_view(p1, cosHalfFovX, cosHalfFovY) ||
+        point_in_view(p2, cosHalfFovX, cosHalfFovY) ||
+        point_in_view(p3, cosHalfFovX, cosHalfFovY)
     );
 }
 

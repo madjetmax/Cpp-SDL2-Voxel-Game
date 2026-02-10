@@ -469,7 +469,7 @@ map <uint8_t, InventoryItemData> all_items_data = {
 
         10.5*3, 10.5*3,
         1,
-        60,
+        600,
         "tool",
         "",
         {0, 0},
@@ -483,7 +483,7 @@ map <uint8_t, InventoryItemData> all_items_data = {
 
         10.5*3, 10.5*3,
         1,
-        130,
+        1300,
         "tool",
         "",
         {0, 0},
@@ -497,7 +497,7 @@ map <uint8_t, InventoryItemData> all_items_data = {
 
         10.5*3, 10.5*3,
         1,
-        250,
+        2500,
         "tool",
         "",
         {0, 0},

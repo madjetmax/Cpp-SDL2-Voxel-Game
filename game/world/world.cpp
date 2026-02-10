@@ -1,18 +1,18 @@
 #include "world.h"
 
-World::World() {
-    
-}
+World::World() {}
 
 void World::on_start() {
     // set copies to world loader
     world_loader.all_blocks_entities = &all_blocks_entities;
+    world_loader.all_mobs = &all_mobs;
 
     load_all_blocks();
     load_drop_items_entities();
+    load_mobs();
 
     auto start_time = high_resolution_clock::now();
-    world_generator.generate(chunks, storages, last_storage_id, "alpha");
+    world_generator.generate(chunks, storages, last_storage_id, "superflat");
     auto end_time = high_resolution_clock::now();
     double work_time = duration_cast<duration<double, milli>>(end_time - start_time).count();
 
@@ -22,6 +22,22 @@ void World::on_start() {
     camera.x = player.x;
     camera.y = player.y;
     camera.z = player.z;
+
+    // set mob
+    Mob test_mob;
+    test_mob.x = 200;
+    test_mob.y = 700;
+    test_mob.z = 200;
+    test_mob.full_model_id = mob_name_to_mob_id["test"];
+
+    // set collider size from model
+    FullEntityModel model = all_entity_models[mob_name_to_mob_id["test"]];
+    test_mob.collider_size_x = model.collider_size_x;
+    test_mob.collider_size_top = model.collider_size_top;
+    test_mob.collider_size_bottom = model.collider_size_bottom;
+    test_mob.collider_size_z = model.collider_size_z;
+
+    all_mobs.push_back(test_mob);
 }
 
 
@@ -36,22 +52,74 @@ void World::controls(SDL_Event& event, float dt) {
     player.controls(event, camera, dt);
 }
 
-void World::update_sun_light(float dt) {
-    if (day) {
-        world_renderer.sun_light -= 0.001 * dt;
-    } else {
-        world_renderer.sun_light += 0.001 * dt;
+float lerp(float a, float b, float t)
+{
+    return a + (b - a) * t;
+}
+
+// Smoothstep for better transitions (no harsh color changes)
+float smoothstep(float t)
+{
+    return t * t * (3.0f - 2.0f * t);
+}
+
+SDL_Color lerpColor(const SDL_Color& a, const SDL_Color& b, float t)
+{
+    t = std::clamp(t, 0.0f, 1.0f);
+
+    SDL_Color result;
+    result.r = static_cast<Uint8>(lerp(a.r, b.r, t));
+    result.g = static_cast<Uint8>(lerp(a.g, b.g, t));
+    result.b = static_cast<Uint8>(lerp(a.b, b.b, t));
+    result.a = 255;
+
+    return result;
+}
+
+SDL_Color World::getSkyColor()
+{
+    float t;
+
+    if (time < TIME_MORNING)
+    {
+        t = smoothstep(time / float(TIME_MORNING));
+        return lerpColor(SKY_NIGHT, SKY_MORNING, t);
+    }
+    else if (time < TIME_DAY_START)
+    {
+        t = smoothstep((time - TIME_MORNING) / float(TIME_DAY_START - TIME_MORNING));
+        return lerpColor(SKY_MORNING, SKY_DAY, t);
+    }
+    else if (time < TIME_DAY_END)
+    {
+        t = smoothstep((time - TIME_DAY_START) / float(TIME_DAY_END - TIME_DAY_START));
+        return lerpColor(SKY_DAY, SKY_DAY, t);
+    }
+    else if (time < TIME_EVENING)
+    {
+        t = smoothstep((time - TIME_DAY_END) / float(TIME_EVENING - TIME_DAY_END));
+        return lerpColor(SKY_DAY, SKY_EVENING, t);
+    }
+    else
+    {
+        t = smoothstep((time - TIME_EVENING) / float(TIME_END - TIME_EVENING));
+        return lerpColor(SKY_EVENING, SKY_NIGHT, t);
+    }
+}
+
+
+void World::update_time(float dt) {
+    time += 0.3f * dt;
+
+    if (time > TIME_END) {
+        time = 0.0f;
     }
 
-    // set night
-    if (world_renderer.sun_light < 0.1) {
-        day = false;
-    }
+    // set sky color and sun light
+    sky_color = getSkyColor();
 
-    // set day
-    if (world_renderer.sun_light > 1.0f) {
-        day = true;
-    }
+    float average_color = (float(sky_color.r) + float(sky_color.g) + float(sky_color.b) ) / 3.0f;
+    world_renderer.sun_light = average_color / max_sky_color_value;
 }
 
 // * loops for all entities
@@ -276,6 +344,78 @@ void World::loop_all_entities(PlayerInventory& player_inv, float dt) {
                     [](const BlockEntity& e) { return e.on_remove; }),
         all_blocks_entities.end()
     );
+
+
+    // * mobs
+    all_mobs.reserve(100);
+    for (size_t ei = 0; ei < all_mobs.size(); ei++)
+    {
+        Mob& entity = all_mobs[ei];
+        
+        entity.update(chunks, dt);
+
+        // set selected by player
+        bool selected = false;
+        if (world_renderer.selected_face && world_renderer.selected_face->entity_ind == ei) {
+            selected = true;
+
+            // hurt if player kick
+            if (player.on_kick) {
+                entity.hurt(10.0f);
+                // add inert and gravity
+                entity.inert_x += 4.0f * -player.angle_y_sin;
+                entity.inert_z += 4.0f * player.angle_y_cos;
+                
+                if (entity.grounded) {
+                    entity.gravity += 5.0f;
+                }
+            }
+        }
+
+        // * project faces
+        FullEntityModel full_model = all_entity_models[entity.full_model_id];
+        
+        full_model.faces.reserve(0);
+        for (size_t fi = 0; fi < full_model.faces.size(); fi++) {
+            RawFace3d& raw_face = full_model.faces[fi];
+            entity.set_clear_face_pos(raw_face);
+
+            // set color
+            raw_face.point1_color = {255, 255, 255, 255};
+            raw_face.point2_color = {255, 255, 255, 255};
+            raw_face.point3_color = {255, 255, 255, 255};
+
+            // set color if hurts
+            if (entity.damage_redness > 0) {
+                raw_face.point1_color = {255, 130, 130, 255};
+                raw_face.point2_color = {255, 130, 130, 255};
+                raw_face.point3_color = {255, 130, 130, 255};
+            }
+
+            raw_face.light = {200, 200, 200};
+
+            // project with camera and add to projected faces
+            auto projected_face = camera.full_face_projection(raw_face);
+            if (projected_face.has_value()) {
+                // set entity ind
+                projected_face->entity_ind = ei;
+
+                ProjectedFace2d& face_2d = *projected_face;
+                world_renderer.projected_faces_2d.push_back(face_2d);
+                world_renderer.add_selected_face(face_2d, player_inv);
+            }
+        }
+    }
+
+    // * remove mobs
+    all_mobs.erase(
+        remove_if(all_mobs.begin(), all_mobs.end(),
+                    [](const Mob& e) { return e.on_remove; }),
+        all_mobs.end()
+    );
+
+    // clear player states
+    player.on_kick = false;
 }
 
 void World::update(PlayerInventory& player_inv, float dt) {
@@ -287,7 +427,10 @@ void World::update(PlayerInventory& player_inv, float dt) {
 
     world_renderer.update(camera, chunks, player, player_inv);
 
-    update_sun_light(dt);
+    update_time(dt);
+
+    // clear player inv states
+    player_inv.on_slot_change = false;
 }
 
 void World::draw(SDL_Renderer* renderer) {

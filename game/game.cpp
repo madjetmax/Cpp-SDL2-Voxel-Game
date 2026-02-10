@@ -26,8 +26,12 @@ void Game::init() {
     player_inventory->load_all_textures(renderer);
 
     world.on_start();
+    cout << 1 << endl;
 
     text_draw.load_all_charecters(renderer);
+
+    cout << 2 << endl;
+
 
     // other values
     run = true;
@@ -71,21 +75,30 @@ void Game::controls(SDL_Event& event) {
 }
 
 void Game::update() {
-    world.update(*player_inventory, delta_time);
-    player_inventory->update(world.player, world.all_items_drops, mpos, WINDOW_W, WINDOW_H, delta_time);
+    cout << 55 << endl;
 
+    world.update(*player_inventory, delta_time); // todo here
+    cout << 555 << endl;
+    player_inventory->update(world.player, world.all_items_drops, mpos, WINDOW_W, WINDOW_H, delta_time);
+    cout << 6 << endl;
 }
 
 void Game::draw() {
+    cout << 41 << endl;
     world.draw(renderer);
+    cout << 42 << endl;
     player_inventory->draw(renderer, world.player, text_draw, mpos, WINDOW_W, WINDOW_H);
-
+    cout << 43 << endl;
     debud_draw();
 }
 
 void Game::debud_draw() {
     string fps_string = to_string(int(fps));
     text_draw.draw_text(renderer, "fps:" + fps_string, 10, 10, "right", "bottom", 2, true, 150);
+
+    string world_time = to_string(world.time);
+    text_draw.draw_text(renderer, "time:" + world_time, 10, 50, "right", "bottom", 2, true, 150);
+
 }
 
 
@@ -96,20 +109,34 @@ void Game::main_loop() {
 
         // handle events
         SDL_PollEvent(&event);
+        cout << 7 << endl;
         controls(event);
+        cout << 8 << endl;
+
         world.controls(event, delta_time);
+        cout << 9 << endl;
+
         player_inventory->controls(event, world.all_items_drops, world.player, WINDOW_W, WINDOW_H);
+        cout << 10 << endl;
+        
         if (event.type == SDL_QUIT) {
             run = false;
         }
         
+
         SDL_RenderPresent(renderer);
-        SDL_SetRenderDrawColor(renderer, 5 * world.world_renderer.sun_light, 170 * world.world_renderer.sun_light, 242 * world.world_renderer.sun_light, 255);
+        SDL_SetRenderDrawColor(renderer, world.sky_color.r, world.sky_color.g, world.sky_color.b, 255);
         
         SDL_RenderClear(renderer);
 
+        cout << 3 << endl;
         update();
-        draw();
+        cout << 4 << endl;
+        draw(); // todo here
+        cout << 5 << endl;
+
+
+
 
         // set fps and delta time
         frame_time = SDL_GetTicks() - start_time;

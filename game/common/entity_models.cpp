@@ -1,10 +1,11 @@
 #include "entity_models.h"
 
-uint8_t last_entity_id = 1;
+uint8_t last_model_id = 1;
 
 map <uint8_t, FullEntityModel> all_entity_models = {};
 vector <CreationEntityModel> all_creation_entities = {};
 map <uint8_t, uint8_t> item_id_to_entity_id = {};
+map <string, uint8_t> mob_name_to_mob_id = {};
 
 void load_drop_items_entities() {
     // loop all items data and load models
@@ -38,9 +39,9 @@ void load_drop_items_entities() {
                 block_model.faces
             };
             
-            all_entity_models[last_entity_id] = full_entity_model;
-            item_id_to_entity_id[item->first] = last_entity_id;
-            last_entity_id++;
+            all_entity_models[last_model_id] = full_entity_model;
+            item_id_to_entity_id[item->first] = last_model_id;
+            last_model_id++;
         }
         // load as 2d texture
         else if (item->second.drop_item_model_type == "2d") {
@@ -66,9 +67,33 @@ void load_drop_items_entities() {
             // add full model
             FullEntityModel full_entity_model = {faces};
             
-            all_entity_models[last_entity_id] = full_entity_model;
-            item_id_to_entity_id[item->first] = last_entity_id;
-            last_entity_id++;
+            all_entity_models[last_model_id] = full_entity_model;
+            item_id_to_entity_id[item->first] = last_model_id;
+            last_model_id++;
         }
     };
+}
+
+void load_mobs() {
+    // * test model
+    vector<RawFace3d> faces = all_blocks_models[1].faces;
+
+    // set rand faces texture ids
+    for (size_t fi = 0; fi < faces.size(); fi++)
+    {
+        RawFace3d& face = faces[fi];
+        face.visiblity_angle_x_add = 180;
+        face.visiblity_angle_y_add = 180;
+        face.t_id = randint(1, 91); 
+    }
+
+    // add full model
+    FullEntityModel full_entity_model = {
+        faces, 100, 50, 50, 100
+    };
+    
+    all_entity_models[last_model_id] = full_entity_model;
+    mob_name_to_mob_id["test"] = last_model_id;
+    last_model_id++;
+    cout << int(last_model_id) << endl;
 }

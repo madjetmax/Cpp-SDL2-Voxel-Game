@@ -204,9 +204,11 @@ void PlayerInventory::controls(SDL_Event& event, vector<ItemDrop>& all_items_dro
     if (event.type == SDL_MOUSEWHEEL) {
         if (event.wheel.y == -1) {
             current_slot_ind++;
+            on_slot_change = true;
         }
         if (event.wheel.y == 1) {
             current_slot_ind--;
+            on_slot_change = true;
         }
         // limit
         if (current_slot_ind > 8) {
@@ -2136,10 +2138,12 @@ void PlayerInventory::draw_slot(SDL_Renderer* renderer, TextDraw& text_draw, SDL
 
 void PlayerInventory::draw(SDL_Renderer* renderer, Player& player, TextDraw& text_draw, vec2 mpos, int sc_w, int sc_h) {
     // * hotbat and slots
+    cout << 421 << endl;
     SDL_RenderCopy(renderer, hotbar_t, NULL, &hotbar_rect);
     if (!player.in_inventory) {
         SDL_RenderCopy(renderer, slot_selector_t, NULL, &slot_selector_rect);
     }
+    cout << 422 << endl;
 
     // * hotbar items slots
     int items_draw_start_x = hotbar_rect.x + slot_w / 2;
@@ -2203,12 +2207,12 @@ void PlayerInventory::draw(SDL_Renderer* renderer, Player& player, TextDraw& tex
             SDL_RenderFillRect(renderer, &durability_line_rect);
         }
     }
-
+    cout << 423 << endl;
     // * left hand
     if (player.in_inventory || left_hand_slot_data) {
         draw_slot(renderer, text_draw, left_hand_slot_rect, left_hand_slot, left_hand_slot_data);
     }
-
+    cout << 424 << endl;
     if (player.in_inventory) {
         // * all items slots
         int x_start = sc_w - (slot_w * 4);
@@ -2480,6 +2484,7 @@ void PlayerInventory::draw(SDL_Renderer* renderer, Player& player, TextDraw& tex
             }
         }
     }
+    cout << 425 << endl;
     // * grabbed item
     if (grabbed_item_data) {
         // set rect
@@ -2531,6 +2536,7 @@ void PlayerInventory::draw(SDL_Renderer* renderer, Player& player, TextDraw& tex
             SDL_RenderFillRect(renderer, &durability_line_rect);
         }
     }
+    cout << 426 << endl;
     // * selected slot item title 
     if (selected_slot_title != "") {
         int x = mpos.x + 25;
@@ -2545,7 +2551,7 @@ void PlayerInventory::draw(SDL_Renderer* renderer, Player& player, TextDraw& tex
 
         text_draw.draw_text(renderer, selected_slot_title, x, mpos.y, x_pos, y_pos, 2, true, 150);
     }   
-    
+    cout << 427 << endl;
     // * current slot title
     if (show_current_slot_cooldown > 0 && !player.in_inventory) {
         if (current_slot->item_id != 0) {
